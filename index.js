@@ -36,7 +36,6 @@ app.get("/api/users", async (req, res) => {
   }
 })
 
-
 app.post("/api/users", async (req, res) => {
   console.log(req.body)
   const userObj = new User({
@@ -79,6 +78,44 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
     console.log(err);
     res.send("There was an error saving the exercise");
   }
+})
+
+app.get("/api/users/:_id/logs", async (req, res) => {
+  const { from, to, limit } = req.query;
+  const id = req.params._id;
+  const user = await User.findById(id);
+  if (!user) {
+    res.send("Could not find user");
+    return;
+  }
+  let dateObj = {}
+  if (from) {
+    dateObj["$gte"] = new Date(from)
+  }
+  if (to) {
+    dateObj["$lte"] = new Date(to)
+  }
+  let filter = {
+    user_id: id
+  }
+  if (from || to) {
+    filter.date = dateObj
+  }
+
+  const exercises = await Exercise.find(filter).limit(+limit ?? 500);
+
+  const log = exercises.map(e => ({
+    description: e.description,
+    duration: e.duration,
+    date: e.date.toDateString()
+  }))
+
+  res.json({
+    username: user.username,
+    count: exercises.length,
+    _id: user._id,
+    log
+  })
 })
 
 const listener = app.listen(process.env.PORT || 3000, () => {
